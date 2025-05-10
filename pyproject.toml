@@ -1,0 +1,13 @@
+[project]
+name = "think-tank"
+version = "0.1.0"
+description = "Multi-agent system for multi-perspective problem solving using Google ADK and Vertex AI."
+authors = ["Your Name <your@email.com>"]
+requires-python = ">=3.9"
+dependencies = [
+    "google-adk",
+    "python-dotenv",
+    "google-cloud-aiplatform"
+]
+
+[tool.uv] 
