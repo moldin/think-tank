@@ -7,7 +7,10 @@ requires-python = ">=3.9"
 dependencies = [
     "google-adk",
     "python-dotenv",
-    "google-cloud-aiplatform"
+    "google-cloud-aiplatform",
+    "fpdf>=1.7.2",
+    "weasyprint>=65.1",
+    "markdown2>=2.5.3",
 ]
 
-[tool.uv] 
+[tool.uv]

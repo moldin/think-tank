@@ -2,7 +2,7 @@
 from google.adk.agents import LlmAgent, ParallelAgent
 from think_tank.sub_agents.think_tank.prompt import MCKINSEY_PROMPT, ORG_PSYCHOLOGIST_PROMPT, CHANGE_MANAGEMENT_PROMPT
 from think_tank.sub_agents.think_tank.prompt import AIML_LEAD_PROMPT, AI_ETHICS_PROMPT, SCENARIO_PLANNER_PROMPT
-from think_tank.sub_agents.think_tank.prompt import DEBONO_HATS_PROMPT, DEVILS_ADVOCATE_PROMPT
+from think_tank.sub_agents.think_tank.prompt import DEBONO_HATS_PROMPT, DEVILS_ADVOCATE_PROMPT, UX_DESIGN_THINKER_PROMPT
 from dotenv import load_dotenv
 import os
 load_dotenv()
@@ -63,6 +63,17 @@ ai_ethics_agent = LlmAgent(
     output_key="ai_ethics_output"
 )
 
+UX_DESIGN_THINKER_DESCRIPTION = """
+Uncovers user needs and pain points, turning insights into prototype hypotheses and test plans.
+"""
+ux_design_thinker_agent = LlmAgent(
+    name="ux_design_thinker",
+    model=MODEL,
+    description=UX_DESIGN_THINKER_DESCRIPTION,
+    instruction=UX_DESIGN_THINKER_PROMPT,
+    output_key="ux_design_thinker_output"
+)
+
 SCENARIO_PLANNER_DESCRIPTION = """
 CExplores plausible futures, stress‑testing strategies against external drivers across 5‑ and 10‑year horizons.
 """
@@ -105,6 +116,7 @@ think_tank_agent = ParallelAgent(
         change_management_agent,
         #aiml_lead_agent,
         #ai_ethics_agent,
+        #ux_design_thinker_agent,
         scenario_planner_agent,
         debono_hats_agent,
         devils_advocate_agent

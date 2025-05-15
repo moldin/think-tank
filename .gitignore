@@ -72,3 +72,4 @@ coverage.xml
 .DS_Store 
 
 docs/ 
+artifacts/

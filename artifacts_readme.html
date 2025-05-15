@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Working with Artifacts, FunctionTool, and ToolContext in ADK</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+      background: #f7f9fb;
+      color: #222;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 820px;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+      padding: 40px 32px 32px 32px;
+    }
+    h1, h2, h3 {
+      color: #2a4d7a;
+      margin-top: 1.5em;
+      margin-bottom: 0.5em;
+    }
+    h1 {
+      font-size: 2.4em;
+      margin-top: 0;
+      border-bottom: 2px solid #e3eaf2;
+      padding-bottom: 0.3em;
+    }
+    h2 {
+      font-size: 1.5em;
+      border-left: 4px solid #6cb4f7;
+      padding-left: 0.5em;
+      background: #f0f6fa;
+    }
+    h3 {
+      font-size: 1.15em;
+      color: #3a6ea5;
+    }
+    p, ul, ol {
+      line-height: 1.7;
+      font-size: 1.08em;
+    }
+    ul, ol {
+      margin-left: 1.5em;
+    }
+    code, pre {
+      font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace;
+      background: #f4f7fa;
+      color: #1a3a5a;
+      border-radius: 5px;
+    }
+    pre {
+      padding: 1em;
+      overflow-x: auto;
+      margin: 1.2em 0;
+      background: #f4f7fa;
+      border-left: 4px solid #6cb4f7;
+    }
+    code {
+      padding: 0.2em 0.4em;
+      font-size: 1em;
+    }
+    .note {
+      background: #eaf6ff;
+      border-left: 4px solid #6cb4f7;
+      padding: 0.8em 1em;
+      margin: 1.2em 0;
+      border-radius: 6px;
+      color: #205080;
+    }
+    a {
+      color: #2a7ae2;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #e3eaf2;
+      margin: 2.5em 0 2em 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Working with Artifacts, FunctionTool, and ToolContext in ADK</h1>
+    <p>This guide explains how to build tools for agents using the Google Agent Development Kit (ADK), focusing on:</p>
+    <ul>
+      <li>Creating tools with <code>FunctionTool</code></li>
+      <li>Saving and loading artifacts (binary data, e.g., PDFs)</li>
+      <li>Using <code>ToolContext</code> for artifact management</li>
+      <li>Async mechanics and best practices</li>
+    </ul>
+
+    <h2>1. What is a FunctionTool?</h2>
+    <p>A <code>FunctionTool</code> is a wrapper that allows you to expose a Python function as a callable tool for an agent. The function can perform any logic, including interacting with files, APIs, or the ADK artifact system.</p>
+    <pre><code>from google.adk.tools import FunctionTool
+from google.genai.types import Part
+
+async def markdown_to_pdf(tool_context, markdown_text: str, filename: str = "generated_report.pdf") -> dict:
+    # ... implementation ...
+
+markdown_to_pdf_tool = FunctionTool(
+    func=markdown_to_pdf,
+    name="markdown_to_pdf",
+    description="Convert markdown text to a PDF and save as an artifact."
+)
+</code></pre>
+
+    <h2>2. ToolContext: The Bridge to Artifacts</h2>
+    <p><code>ToolContext</code> is passed as the first argument to every tool function. It provides methods to interact with the agent's runtime, including saving and loading artifacts.</p>
+    <h3>Key Methods:</h3>
+    <ul>
+      <li><code>await tool_context.save_artifact(filename, part)</code> — Save a binary/text artifact</li>
+      <li><code>await tool_context.load_artifact(filename)</code> — Load a previously saved artifact</li>
+      <li><code>tool_context.list_artifacts()</code> — List available artifact filenames</li>
+    </ul>
+    <div class="note">
+      <strong>Artifacts</strong> are versioned, named binary blobs (e.g., PDFs, images) that can be shared between tools and agent runs.
+    </div>
+
+    <h2>3. Saving an Artifact (PDF Example)</h2>
+    <ol>
+      <li>Generate the PDF as bytes</li>
+      <li>Wrap it in a <code>Part</code> using <code>Part.from_bytes(data=..., mime_type=...)</code></li>
+      <li>Save it with <code>await tool_context.save_artifact(...)</code></li>
+    </ol>
+    <pre><code>from google.genai.types import Part
+from fpdf import FPDF
+
+async def markdown_to_pdf(tool_context, markdown_text: str, filename: str = "generated_report.pdf") -> dict:
+    # Convert markdown to plain text (MVP)
+    plain_text = markdown_text.replace("#", "").replace("*", "").replace("`", "")
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    for line in plain_text.split("\n"):
+        pdf.cell(0, 10, txt=line, ln=1)
+    pdf_bytes = pdf.output(dest='S').encode('latin1')
+    pdf_part = Part.from_bytes(data=pdf_bytes, mime_type="application/pdf")
+    artifact_name = f"user:{filename}"
+    await tool_context.save_artifact(artifact_name, pdf_part)
+    return {"status": "success", "artifact_name": artifact_name}
+</code></pre>
+    <div class="note">
+      <ul>
+        <li>Use the <code>user:</code> prefix for artifact names to make them accessible across sessions and tool calls.</li>
+        <li>Always <code>await</code> the save/load methods (they are async coroutines).</li>
+      </ul>
+    </div>
+
+    <h2>4. Loading an Artifact</h2>
+    <pre><code>async def publish_pdf(tool_context, pdf_artifact_name: str, filename: str = "published_report.pdf") -> dict:
+    pdf_part = await tool_context.load_artifact(pdf_artifact_name)
+    if not pdf_part or not hasattr(pdf_part, 'inline_data') or not pdf_part.inline_data.data:
+        return {"status": "error", "message": f"Artifact '{pdf_artifact_name}' not found or invalid."}
+    # Use pdf_part.inline_data.data (bytes) as needed
+</code></pre>
+
+    <h2>5. Registering Tools with an Agent</h2>
+    <pre><code>from content_publisher.tools import markdown_to_pdf, publish_pdf
+from google.adk.agents import LlmAgent
+
+content_publisher_agent = LlmAgent(
+    name="content_publisher",
+    model=MODEL,
+    description=description,
+    instruction=ROOT_AGENT_PROMPT,
+    tools=[markdown_to_pdf, publish_pdf]
+)
+</code></pre>
+
+    <h2>6. Async/Await: Why and How</h2>
+    <ul>
+      <li>ADK's artifact methods are async. Always use <code>async def</code> and <code>await</code>.</li>
+      <li>If you forget to await, you will get warnings and your code will not work as expected.</li>
+    </ul>
+
+    <h2>7. Namespacing and Best Practices</h2>
+    <ul>
+      <li>Use <code>user:</code> prefix for artifact names to persist across tool calls and sessions.</li>
+      <li>Use clear, descriptive filenames (e.g., <code>user:report_2024.pdf</code>).</li>
+      <li>Always check for errors when loading artifacts.</li>
+    </ul>
+
+    <h2>8. Example Workflow</h2>
+    <ol>
+      <li>User asks agent to convert markdown to PDF.</li>
+      <li>Agent calls <code>markdown_to_pdf</code>, which saves the PDF as an artifact (<code>user:generated_report.pdf</code>).</li>
+      <li>Agent calls <code>publish_pdf</code>, which loads the artifact and saves it as a file on disk.</li>
+    </ol>
+
+    <h2>9. Debugging Tips</h2>
+    <ul>
+      <li>Use <code>tool_context.list_artifacts()</code> to see what artifacts are available.</li>
+      <li>Ensure you use the exact artifact name (including <code>user:</code> if used) when loading.</li>
+      <li>If you see coroutine warnings, make sure your tool functions are async and you use <code>await</code>.</li>
+    </ul>
+
+    <hr>
+    <p>For more, see the <a href="https://google.github.io/adk-docs/artifacts/" target="_blank">official ADK artifact documentation</a>.</p>
+  </div>
+</body>
+</html> 
